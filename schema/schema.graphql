@@ -1,0 +1,261 @@
+scalar DateTime
+
+type User {
+  id: ID!
+  username: String!
+  createdAt: DateTime!
+  boards: [Board!] # Boards owned by or member of
+}
+
+type BoardMember {
+  user: User! # Reference to the User type
+  role: BoardMemberRole!
+}
+
+enum BoardMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+type Board {
+  id: ID!
+  name: String!
+  owner: User! # Assuming userId maps to an owner
+  createdAt: DateTime!
+  isArchived: Boolean
+  background: String
+  isTemplate: Boolean
+  isFavorite: Boolean
+  members: [BoardMember!]
+  lists: [List!]
+}
+
+type List {
+  id: ID!
+  title: String!
+  board: Board!
+  # userId: ID! # Who created the list, can be part of a 'creator' field if needed
+  createdAt: DateTime!
+  updatedAt: DateTime
+  position: Int # Assuming position is part of the List object
+  cards: [Card!]
+}
+
+type ChecklistItem {
+  id: ID!
+  text: String!
+  completed: Boolean!
+}
+
+type Checklist {
+  id: ID!
+  title: String!
+  items: [ChecklistItem!]
+}
+
+type Card {
+  id: ID!
+  title: String!
+  description: String
+  list: List!
+  # userId: ID! # Who created the card, can be part of a 'creator' field if needed
+  createdAt: DateTime!
+  updatedAt: DateTime
+  dueDate: DateTime
+  labels: [String!]
+  checklists: [Checklist!] # Changed from 'checklist' to 'checklists' for multiple
+  comments: [Comment!]
+  position: Int # Assuming position can be part of a card for ordering within a list
+}
+
+type Comment {
+  id: ID!
+  text: String!
+  author: User! # Assuming userId maps to an author
+  card: Card!   # Assuming comments are primarily associated with cards
+  createdAt: DateTime!
+}
+
+# Payload for authentication operations
+type AuthPayload {
+  token: String!
+  user: User # Return user details on login/registration
+}
+
+# Generic message response for mutations like delete, logout
+type MessageResponse {
+  message: String!
+  success: Boolean!
+}
+
+# Input Types for Mutations
+
+input RegisterUserInput {
+  username: String!
+  password: String!
+}
+
+input LoginInput {
+  username: String!
+  password: String!
+}
+
+input UpdatePasswordInput {
+  # userId: ID! # Usually, the user is derived from context (auth token)
+  currentPassword: String!
+  newPassword: String!
+}
+
+input CreateBoardInput {
+  name: String!
+  # userId will be from context
+}
+
+input UpdateBoardInput {
+  name: String
+  background: String
+  isTemplate: Boolean
+  isFavorite: Boolean
+  isArchived: Boolean
+  # members: [UpdateBoardMemberInput] # For managing members, if needed
+}
+
+# input UpdateBoardMemberInput { # Example if member management is granular
+#   userId: ID!
+#   role: BoardMemberRole
+# }
+
+input CreateListInput {
+  # boardId: ID! # This will be an argument to the mutation field
+  title: String!
+  # userId from context
+}
+
+input UpdateListInput {
+  title: String
+  position: Int
+}
+
+input CreateCardInput {
+  # listId: ID! # This will be an argument to the mutation field
+  title: String!
+  description: String
+  dueDate: DateTime
+  labels: [String!]
+  # userId from context
+  position: Int # Optional: for initial position
+}
+
+input UpdateCardInput {
+  title: String
+  description: String
+  listId: ID # To move card to a different list
+  dueDate: DateTime
+  labels: [String!]
+  position: Int
+  # checklist items are handled by separate mutations
+}
+
+input CreateCommentInput {
+  # cardId: ID! # This will be an argument to the mutation field
+  text: String!
+  # authorId from context
+}
+
+# For the generic POST /comments, if we decide to implement its GraphQL equivalent
+# It might need a cardId in the payload if not in the path.
+input CreateGenericCommentInput {
+  cardId: ID! # Assuming it needs to be associated with a card
+  text: String!
+  # authorId from context
+}
+
+input UpdateCommentInput {
+  text: String!
+}
+
+input CreateChecklistInput {
+  # cardId: ID! # This will be an argument to the mutation field
+  title: String!
+}
+
+input UpdateChecklistItemInput { # Assuming we need fine-grained control
+  text: String
+  completed: Boolean
+}
+
+type Query {
+  # User queries
+  currentUser: User # Fetches the currently authenticated user
+  users: [User!] # Fetches all users (admin/protected if necessary)
+  # user(id: ID!): User # Fetches a user by ID - REST API had GET /users, not GET /users/:id
+
+  # Board queries
+  boards: [Board!] # Fetches boards for the authenticated user
+  board(id: ID!): Board # Fetches a specific board by ID
+
+  # List queries
+  # Lists are typically fetched in context of a board, see Board.lists
+  list(id: ID!): List # Fetches a specific list by ID
+  listsForBoard(boardId: ID!): [List!] # Corresponds to GET /boards/:boardId/lists
+
+  # Card queries
+  # Cards are typically fetched in context of a list, see List.cards
+  card(id: ID!): Card # Fetches a specific card by ID
+  cardsForList(listId: ID!): [Card!] # Corresponds to GET /lists/:listId/cards
+  # cardInList(listId: ID!, cardId: ID!): Card # For GET /lists/:listId/cards/:cardId if needed, but card(id) is usually enough
+
+  # Comment queries
+  comment(id: ID!): Comment # Fetches a specific comment by ID
+  comments(cardId: ID, authorId: ID): [Comment!] # Fetches comments, optionally filtered by card or author
+                                                  # Corresponds to GET /comments (with authorId filter)
+                                                  # and comments are also part of Card.comments
+}
+
+# Mutation type
+type Mutation {
+  # Auth mutations
+  registerUser(input: RegisterUserInput!): AuthPayload!
+  login(input: LoginInput!): AuthPayload!
+  logout: MessageResponse! # Invalidates token on server
+
+  # User mutations
+  updatePassword(input: UpdatePasswordInput!): MessageResponse!
+  deleteCurrentUser: MessageResponse! # Deletes the authenticated user's account
+
+  # Board mutations
+  createBoard(input: CreateBoardInput!): Board!
+  updateBoard(id: ID!, input: UpdateBoardInput!): Board
+  deleteBoard(id: ID!): MessageResponse
+
+  # List mutations
+  createList(boardId: ID!, input: CreateListInput!): List!
+  updateList(id: ID!, input: UpdateListInput!): List
+  deleteList(id: ID!): MessageResponse
+
+  # Card mutations
+  createCard(listId: ID!, input: CreateCardInput!): Card!
+  updateCard(id: ID!, input: UpdateCardInput!): Card
+  deleteCard(id: ID!): MessageResponse
+  # moveCard(id: ID!, newListId: ID!, newPosition: Int): Card # Example of a more specific mutation
+
+  # Comment mutations
+  createComment(cardId: ID!, input: CreateCommentInput!): Comment! # For POST /cards/:cardId/comments
+  # createGenericComment(input: CreateGenericCommentInput!): Comment! # For POST /comments, if implemented
+  updateComment(id: ID!, input: UpdateCommentInput!): Comment
+  deleteComment(id: ID!): MessageResponse
+
+  # Checklist mutations (simplified: create checklist, then manage items)
+  createChecklist(cardId: ID!, input: CreateChecklistInput!): Checklist!
+  # Further checklist item mutations could be:
+  # addChecklistItem(checklistId: ID!, text: String!): ChecklistItem!
+  # updateChecklistItem(id: ID!, input: UpdateChecklistItemInput!): ChecklistItem!
+  # deleteChecklistItem(id: ID!): MessageResponse!
+  # For simplicity, ChecklistItems might be managed as part of UpdateCard initially or through resolvers on Checklist
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+}
