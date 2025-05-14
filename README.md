@@ -2,35 +2,6 @@
 
 This project provides a GraphQL API for a Trello-like application. It allows users to create boards, lists, cards, and manage comments - all through GraphQL queries and mutations.
 
-## Table of Contents
-- [Installation](#installation)
-- [Getting Started](#getting-started)
-- [Environment Configuration](#environment-configuration)
-- [API Overview](#api-overview)
-- [Authentication](#authentication)
-- [Example Queries and Mutations](#example-queries-and-mutations)
-
-## Installation
-
-This project can be installed and run using Docker (recommended) or directly with Node.js.
-
-### Using Docker
-
-```bash
-# Build the Docker image
-docker build -t trello-clone-api .
-
-# Run the container
-docker run -p 3066:3066 trello-clone-api
-```
-
-### Using Node.js
-
-```bash
-# Install dependencies
-npm install
-```
-
 ## Getting Started
 
 ### Using the run script
@@ -43,33 +14,25 @@ chmod +x scripts/run.sh
 ./scripts/run.sh
 ```
 
-### Starting manually
+After starting, the GraphQL API will be available at:
+
+- [http://localhost:3066/graphql](http://localhost:3066/graphql)
+
+## Testing
 
 ```bash
-# Start the server
-npm start
-# OR
-node server.js
+# Run tests
+chmod +x tests/test.sh
+
+# Run the server
+./tests/test.sh
 ```
 
-After starting, the GraphQL API will be available at:
-- http://localhost:3066/graphql
-
-## Environment Configuration
-
-Create a `.env` file in the root directory with the following variables:
-
-```
-JWT_SECRET=your_secret_key_here
-PORT=3066
-```
-
-- `JWT_SECRET`: Secret key for JWT authentication (required)
-- `PORT`: Port number for the server (defaults to 3066 if not specified)
 
 ## API Overview
 
 The API provides GraphQL schema for the following entities:
+
 - **Users**: Registration, authentication, and profile management
 - **Boards**: Create and manage Trello-like boards
 - **Lists**: Create and manage lists within boards
@@ -85,7 +48,8 @@ The API uses JWT (JSON Web Token) for authentication.
 1. Register a new user using the `registerUser` mutation
 2. Login using the `login` mutation
 3. Include the received token in the Authorization header for subsequent requests:
-   ```
+
+   ```http
    Authorization: Bearer YOUR_TOKEN_HERE
    ```
 
@@ -184,13 +148,3 @@ mutation {
 }
 ```
 
-## Testing
-
-```bash
-# Run tests
-npm test
-```
-
-## License
-
-This project is licensed under the MIT License. 
